@@ -1,0 +1,74 @@
+#pragma once
+
+namespace arkernel {
+
+class StereoSLAM {
+public:
+    StereoSLAM(int width, int height, float fx, float fy);
+    ~StereoSLAM();
+    // Process stereo pair, return timestamped pose matrix
+    bool ProcessFrame(const uint8_t* left, const uint8_t* right, float* pose_out);
+};
+
+} // namespace arkernel
+
+#include "StereoSLAM.h"
+#include <vector>
+#include <android/log.h>
+
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "arkernel", __VA_ARGS__)
+
+namespace arkernel {
+
+StereoSLAM::StereoSLAM(int width, int height, float fx, float fy) {
+    // Initialize stereo SLAM (e.g., ORB features)
+    LOGI("StereoSLAM initialized: %dx%d", width, height);
+}
+
+StereoSLAM::~StereoSLAM() {}
+
+bool StereoSLAM::ProcessFrame(const uint8_t* left, const uint8_t* right, float* pose_out) {
+    // Stub: Populate identity matrix
+    for (int i = 0; i < 16; ++i) pose_out[i] = (i % 5 == 0 ? 1.f : 0.f);
+    return true;
+}
+
+} // namespace arkernel
+
+using System.Runtime.InteropServices;
+using UnityEngine;
+
+public class ARKernelManager : MonoBehaviour {
+    [DllImport("arkernel")] private static extern bool InitializeKernel(int w, int h, float fx, float fy);
+    [DllImport("arkernel")] private static extern bool ProcessStereoFrame(
+        System.IntPtr left, System.IntPtr right, System.IntPtr poseOut);
+    [DllImport("arkernel")] private static extern void ThrottlePower(bool lowPower);
+
+    public int width = 1280;
+    public int height = 720;
+    public float fx = 700f, fy = 700f;
+
+    private Texture2D leftTex, rightTex;
+    private ComputeBuffer poseBuffer;
+
+    void Start() {
+        InitializeKernel(width, height, fx, fy);
+        ThrottlePower(true);
+        poseBuffer = new ComputeBuffer(16, sizeof(float));
+    }
+
+    void Update() {
+        // Acquire camera frames into leftTex/rightTex (stub)
+        // Call native processing
+        ProcessStereoFrame(
+            leftTex.GetNativeTexturePtr(),
+            rightTex.GetNativeTexturePtr(),
+            poseBuffer.GetNativeBufferPtr());
+        // Apply overlay shader/material with pose
+    }
+
+    void OnDestroy() {
+        poseBuffer.Release();
+        ThrottlePower(false);
+    }
+}
